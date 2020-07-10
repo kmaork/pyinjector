@@ -43,6 +43,12 @@ def inject(pid: int, library_path: str) -> None:
         injector.detach()
 
 
-if __name__ == '__main__':
-    pid, library_path = sys.argv[1:]
+def main(args=None) -> None:
+    if args is None:
+        args = sys.argv[1:]
+    pid, library_path = args
     inject(int(pid), library_path.encode())
+
+
+if __name__ == '__main__':
+    main()
