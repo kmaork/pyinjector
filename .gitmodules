@@ -1,0 +1,3 @@
+[submodule "injector"]
+	path = injector
+	url = git@github.com:kubo/injector.git
