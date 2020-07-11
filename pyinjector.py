@@ -2,7 +2,7 @@ from argparse import ArgumentParser, Namespace
 from importlib.util import find_spec
 from dataclasses import dataclass
 from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p
-from typing import List, Optional
+from typing import List, Optional, AnyStr, Callable, Any
 
 libinjector_path = find_spec('libinjector').origin
 libinjector = CDLL(libinjector_path)
@@ -19,24 +19,33 @@ libinjector.injector_detach.argtypes = injector_pointer_t,
 libinjector.injector_detach.restype = c_int32
 
 
+def call_c_func(func: Callable[..., int], *args: Any) -> None:
+    ret = func(*args)
+    assert ret == 0, f'{func.__name__} returned {ret}'
+
+
 @dataclass
 class Injector:
     injector_p: injector_pointer_t
 
     @classmethod
     def attach(cls, pid: int) -> 'Injector':
+        assert isinstance(pid, int)
         injector_p = injector_pointer_t()
-        assert libinjector.injector_attach(byref(injector_p), pid) == 0
+        call_c_func(libinjector.injector_attach, byref(injector_p), pid)
         return cls(injector_p)
 
-    def inject(self, library_path: str) -> None:
-        assert libinjector.injector_inject(self.injector_p, library_path) == 0
+    def inject(self, library_path: AnyStr) -> None:
+        if isinstance(library_path, str):
+            library_path = library_path.encode()
+        assert isinstance(library_path, bytes)
+        call_c_func(libinjector.injector_inject, self.injector_p, library_path)
 
     def detach(self) -> None:
-        assert libinjector.injector_detach(self.injector_p) == 0
+        call_c_func(libinjector.injector_detach, self.injector_p)
 
 
-def inject(pid: int, library_path: str) -> None:
+def inject(pid: int, library_path: AnyStr) -> None:
     injector = Injector.attach(pid)
     try:
         injector.inject(library_path)
@@ -53,7 +62,7 @@ def parse_args(args: Optional[List[str]]) -> Namespace:
 
 def main(args: Optional[List[str]] = None) -> None:
     parsed_args = parse_args(args)
-    inject(int(parsed_args.pid), parsed_args.library_path)
+    inject(parsed_args.pid, parsed_args.library_path)
 
 
 if __name__ == '__main__':
