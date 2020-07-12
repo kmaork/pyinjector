@@ -1,0 +1,1 @@
+from .pyinjector import inject
