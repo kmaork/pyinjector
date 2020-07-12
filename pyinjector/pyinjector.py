@@ -19,7 +19,7 @@ libinjector.injector_detach.restype = c_int32
 
 def call_c_func(func: Callable[..., int], *args: Any) -> None:
     ret = func(*args)
-    assert ret == 0, '{} returned {}'.format(func.__name__, ret)  # Gotta support dem old pythons!
+    assert ret == 0, '{} returned {}, see injector/include/injector.h'.format(func.__name__, ret)
 
 
 class Injector:
