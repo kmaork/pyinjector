@@ -1,6 +1,5 @@
 from argparse import ArgumentParser, Namespace
 from importlib.util import find_spec
-from dataclasses import dataclass
 from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p
 from typing import List, Optional, AnyStr, Callable, Any
 
@@ -21,12 +20,12 @@ libinjector.injector_detach.restype = c_int32
 
 def call_c_func(func: Callable[..., int], *args: Any) -> None:
     ret = func(*args)
-    assert ret == 0, f'{func.__name__} returned {ret}'
+    assert ret == 0, '{} returned {}'.format(func.__name__, ret)  # Gotta support dem old pythons!
 
 
-@dataclass
 class Injector:
-    injector_p: injector_pointer_t
+    def __init__(self, injector_p: injector_pointer_t):
+        self.injector_p = injector_p
 
     @classmethod
     def attach(cls, pid: int) -> 'Injector':
