@@ -8,7 +8,8 @@ LIBINJECTOR_SRC = LIBINJECTOR_DIR / 'src' / 'linux'
 libinjector = Extension('libinjector',
                         sources=[str(c.relative_to(PROJECT_ROOT)) for c in LIBINJECTOR_SRC.iterdir()
                                  if c.suffix == '.c'],
-                        include_dirs=[str(LIBINJECTOR_DIR.relative_to(PROJECT_ROOT) / 'include')])
+                        include_dirs=[str(LIBINJECTOR_DIR.relative_to(PROJECT_ROOT) / 'include')],
+                        define_macros=[('EM_AARCH64', '183')])
 
 setup(
     ext_modules=[libinjector],
