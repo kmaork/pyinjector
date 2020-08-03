@@ -1,3 +1,4 @@
+import os
 from importlib.util import find_spec
 from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p
 from typing import AnyStr, Callable, Any
@@ -37,6 +38,7 @@ class Injector:
         if isinstance(library_path, str):
             library_path = library_path.encode()
         assert isinstance(library_path, bytes)
+        assert os.path.isfile(library_path), f'Library not found at "{library_path.decode()}"'
         call_c_func(libinjector.injector_inject, self.injector_p, library_path)
 
     def detach(self) -> None:
@@ -49,4 +51,3 @@ def inject(pid: int, library_path: AnyStr) -> None:
         injector.inject(library_path)
     finally:
         injector.detach()
-
