@@ -6,8 +6,10 @@
 [![Tests (GitHub Actions)](https://github.com/kmaork/pyinjector/workflows/Tests/badge.svg)](https://github.com/kmaork/pyinjector)
 
 A tool/library allowing dynamic library injection into running processes.
-Has no external python dependencies.
-Implemented as a python wrapper for [kubo/injector](https://github.com/kubo/injector).
+If you are looking for a way to inject *python* code into a running process, try the [hypno](https://github.com/kmaork/hypno) library.
+
+Pyinjector has no external python dependencies.
+It is implemented as a python wrapper for [kubo/injector](https://github.com/kubo/injector).
 
 ### Installation
 ```shell script
