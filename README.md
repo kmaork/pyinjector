@@ -21,7 +21,7 @@ Both source distributions and `manylinux2010` wheels are upoloaded to pypi for e
 ### Usage
 #### CLI
 ```shell script
-inject <pid> <path to .so file>
+inject <pid> <path/to/so/file>
 ```
 
 #### API
