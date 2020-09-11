@@ -1,7 +1,7 @@
 import os
 from importlib.util import find_spec
 from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p
-from typing import AnyStr, Callable, Any
+from typing import AnyStr, Callable, Any, Mapping, Type
 
 libinjector_path = find_spec('.libinjector', __package__).origin
 libinjector = CDLL(libinjector_path)
@@ -18,9 +18,35 @@ libinjector.injector_detach.argtypes = injector_pointer_t,
 libinjector.injector_detach.restype = c_int32
 
 
-def call_c_func(func: Callable[..., int], *args: Any) -> None:
+class InjectorError(Exception):
+    def __init__(self, func_name: str, ret_val: int):
+        self.func_name = func_name
+        self.ret_val = ret_val
+
+    def __str__(self):
+        return '{} returned {}, see error code definition in injector/include/injector.h' \
+            .format(self.func_name, self.ret_val)
+
+
+class InjectorPermissionError(InjectorError):
+    def __str__(self):
+        return ('Failed attaching to process due to permission error.\n'
+                'This is most likely due to ptrace scope limitations applied to the kernel for security purposes.\n'
+                'Possible solutions:\n'
+                ' - Rerun as root\n'
+                ' - Temporarily remove ptrace scope limitations using '
+                '`echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope`\n'
+                ' - Persistently remove ptrace scope limitations by editing /etc/sysctl.d/10-ptrace.conf\n'
+                'More details can be found here: https://stackoverflow.com/q/19215177/2907819')
+
+
+def call_c_func(func: Callable[..., int], *args: Any,
+                exception_map: Mapping[int, Type[InjectorError]] = None) -> None:
     ret = func(*args)
-    assert ret == 0, '{} returned {}, see injector/include/injector.h'.format(func.__name__, ret)
+    if ret != 0:
+        exception_map = {} if exception_map is None else exception_map
+        exception_cls = exception_map.get(ret, InjectorError)
+        raise exception_cls(func.__name__, ret)
 
 
 class Injector:
@@ -31,7 +57,8 @@ class Injector:
     def attach(cls, pid: int) -> 'Injector':
         assert isinstance(pid, int)
         injector_p = injector_pointer_t()
-        call_c_func(libinjector.injector_attach, byref(injector_p), pid)
+        call_c_func(libinjector.injector_attach, byref(injector_p), pid,
+                    exception_map={-8: InjectorPermissionError})
         return cls(injector_p)
 
     def inject(self, library_path: AnyStr) -> None:
