@@ -6,7 +6,7 @@
 [![Downloads](https://pepy.tech/badge/pyinjector)](https://pepy.tech/project/pyinjector)
 [![GitHub license](https://img.shields.io/github/license/kmaork/pyinjector)](https://github.com/kmaork/pyinjector/blob/master/LICENSE.txt)
 
-A tool/library allowing dynamic library injection into running processes.
+A cross-platform tool/library allowing dynamic library injection into running processes.
 If you are looking for a way to inject *python* code into a running process, try the [hypno](https://github.com/kmaork/hypno) library.
 
 Pyinjector has no external python dependencies.
