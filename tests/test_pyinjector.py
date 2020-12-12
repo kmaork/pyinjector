@@ -6,7 +6,8 @@ from pyinjector import inject
 
 INJECTION_LIB_PATH = find_spec('injection').origin
 STRING_PRINTED_FROM_LIB = b'Hello, world!'
-TIME_TO_WIT_FOR_PROCESS_TO_INIT = 0.1
+TIME_TO_WIT_FOR_PROCESS_TO_INIT = 1
+TIME_TO_WIT_FOR_INJECTION_TO_RUN = 1
 
 
 def test_inject():
@@ -14,6 +15,7 @@ def test_inject():
         try:
             time.sleep(TIME_TO_WIT_FOR_PROCESS_TO_INIT)
             inject(process.pid, INJECTION_LIB_PATH)
+            time.sleep(TIME_TO_WIT_FOR_INJECTION_TO_RUN)
             assert process.stdout.read() == STRING_PRINTED_FROM_LIB
         finally:
             process.kill()

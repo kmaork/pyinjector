@@ -6,7 +6,7 @@ on:
   push:
 
 jobs:
-  test:
+  test_linux:
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux2014_x86_64 # Need a relatively modern platform for the actions to work
     strategy:
@@ -18,7 +18,7 @@ jobs:
           submodules: true
       - name: Set up Python ${{ matrix.python-version }}
         run: |
-          echo "::add-path::/opt/python/${{ matrix.python-version }}/bin"
+          echo "/opt/python/${{ matrix.python-version }}/bin" >> $GITHUB_PATH
           echo $PATH
       - name: Install dependencies
         run: pip install tox tox-gh-actions tox-wheel
@@ -32,16 +32,47 @@ jobs:
       - name: Test wheel with tox
         run: python -m tox --wheel
       - name: Audit ${{ matrix.python-version }} wheel
-        run: auditwheel repair .tox/dist/* -w wheelhouse${{ matrix.python-version }}
+        run: auditwheel repair .tox/dist/* -w audited_wheels
       - name: Upload ${{ matrix.python-version }} wheel
         uses: actions/upload-artifact@v2
         with:
           name: dist
-          path: wheelhouse${{ matrix.python-version }}/*
+          path: audited_wheels/*
+
+  test_windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        # virtualenv==20.0.33 because of this https://github.com/ContinuumIO/anaconda-issues/issues/10822#issuecomment-736650629
+        run: pip install tox tox-gh-actions tox-wheel virtualenv==20.0.33
+      - name: Test sdist with tox
+        run: python -m tox
+      - name: Upload ${{ matrix.python-version }} sdist
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: .tox/dist/*
+      - name: Test wheel with tox
+        run: python -m tox --wheel
+      - name: Upload ${{ matrix.python-version }} wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: .tox/dist/*
 
   publish:
     if: github.event_name == 'release' && github.event.action == 'created'
-    needs: test
+    needs: [test_windows, test_linux]
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
