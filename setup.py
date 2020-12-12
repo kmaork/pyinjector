@@ -1,10 +1,11 @@
+from sys import platform
 from pathlib import Path
 from setuptools import setup, Extension
 from distutils.extension import Extension
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 LIBINJECTOR_DIR = PROJECT_ROOT / 'injector'
-LIBINJECTOR_SRC = LIBINJECTOR_DIR / 'src' / 'windows'
+LIBINJECTOR_SRC = LIBINJECTOR_DIR / 'src' / ('windows' if platform == 'win32' else 'linux')
 LIBINJECTOR_WRAPPER = PROJECT_ROOT / 'libinjector.c'
 
 libinjector = Extension('pyinjector.libinjector',

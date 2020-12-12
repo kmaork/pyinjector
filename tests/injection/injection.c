@@ -1,15 +1,7 @@
 #include <Python.h>
 PyMODINIT_FUNC PyInit_injection(void) { return NULL; }
 
-#ifdef __linux__
-    static void init(void) __attribute__((constructor));
-
-    static void init(void) {
-        const char *s = "Hello, world!";
-        write(1, s, strlen(s));
-        close(1);
-    }
-#elif _WIN32
+#ifdef _WIN32
     #include <windows.h>
     #include <io.h>
 
@@ -22,5 +14,13 @@ PyMODINIT_FUNC PyInit_injection(void) { return NULL; }
                 break;
         }
         return TRUE;
+    }
+#else
+    static void init(void) __attribute__((constructor));
+
+    static void init(void) {
+        const char *s = "Hello, world!";
+        write(1, s, strlen(s));
+        close(1);
     }
 #endif
