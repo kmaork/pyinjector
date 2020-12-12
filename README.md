@@ -16,12 +16,12 @@ It is implemented as a python wrapper for [kubo/injector](https://github.com/kub
 ```shell script
 pip install pyinjector
 ```
-Both source distributions and `manylinux2010` wheels are upoloaded to pypi for every release.
+Both source distributions, `manylinux2010` wheels and windows wheels are uploaded to Pypi for every release.
 
 ### Usage
 #### CLI
 ```shell script
-inject <pid> <path/to/so/file>
+inject <pid> <path/to/shared/library>
 ```
 
 #### API

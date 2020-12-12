@@ -53,7 +53,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: pip install tox tox-gh-actions tox-wheel
+        # virtualenv==20.0.33 because of this https://github.com/ContinuumIO/anaconda-issues/issues/10822#issuecomment-736650629
+        run: pip install tox tox-gh-actions tox-wheel virtualenv==20.0.33
       - name: Test sdist with tox
         run: python -m tox
       - name: Upload ${{ matrix.python-version }} sdist
