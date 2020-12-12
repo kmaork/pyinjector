@@ -18,7 +18,7 @@ jobs:
           submodules: true
       - name: Set up Python ${{ matrix.python-version }}
         run: |
-          echo "::add-path::/opt/python/${{ matrix.python-version }}/bin"
+          echo "/opt/python/${{ matrix.python-version }}/bin" >> $GITHUB_PATH
           echo $PATH
       - name: Install dependencies
         run: pip install tox tox-gh-actions tox-wheel
@@ -39,9 +39,39 @@ jobs:
           name: dist
           path: wheelhouse${{ matrix.python-version }}/*
 
-  publish_linux:
+  test_windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox tox-gh-actions tox-wheel
+      - name: Test sdist with tox
+        run: python -m tox
+      - name: Upload ${{ matrix.python-version }} sdist
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: .tox/dist/*
+      - name: Test wheel with tox
+        run: python -m tox --wheel
+      - name: Upload ${{ matrix.python-version }} wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: wheelhouse${{ matrix.python-version }}/*
+
+  publish:
     if: github.event_name == 'release' && github.event.action == 'created'
-    needs: test_linux
+    needs: [test_windows, test_linux]
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
