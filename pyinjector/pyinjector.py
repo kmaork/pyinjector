@@ -1,7 +1,7 @@
 import os
 from importlib.util import find_spec
 from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p
-from typing import AnyStr, Callable, Any, Mapping, Type
+from typing import AnyStr, Callable, Any, Mapping, Type, Optional
 
 libinjector_path = find_spec('.libinjector', __package__).origin
 libinjector = CDLL(libinjector_path)
@@ -16,21 +16,26 @@ libinjector.injector_inject.argtypes = injector_pointer_t, c_char_p
 libinjector.injector_inject.restype = c_int32
 libinjector.injector_detach.argtypes = injector_pointer_t,
 libinjector.injector_detach.restype = c_int32
+libinjector.injector_error.argtypes = ()
+libinjector.injector_error.restype = c_char_p
 
 
 class InjectorError(Exception):
-    def __init__(self, func_name: str, ret_val: int):
+    def __init__(self, func_name: str, ret_val: int, error_str: Optional[bytes]):
         self.func_name = func_name
         self.ret_val = ret_val
+        self.error_str = error_str.decode()
 
     def __str__(self):
-        return '{} returned {}, see error code definition in injector/include/injector.h' \
-            .format(self.func_name, self.ret_val)
+        explanation = 'see error code definition in injector/include/injector.h' \
+            if self.error_str is None else self.error_str
+        return '{} returned {}: {}'.format(self.func_name, self.ret_val, explanation)
 
 
 class InjectorPermissionError(InjectorError):
     def __str__(self):
-        return ('Failed attaching to process due to permission error.\n'
+        return (super().__str__() +
+                '\nFailed attaching to process due to permission error.\n'
                 'This is most likely due to ptrace scope limitations applied to the kernel for security purposes.\n'
                 'Possible solutions:\n'
                 ' - Rerun as root\n'
@@ -46,7 +51,7 @@ def call_c_func(func: Callable[..., int], *args: Any,
     if ret != 0:
         exception_map = {} if exception_map is None else exception_map
         exception_cls = exception_map.get(ret, InjectorError)
-        raise exception_cls(func.__name__, ret)
+        raise exception_cls(func.__name__, ret, libinjector.injector_error())
 
 
 class Injector:
