@@ -2,7 +2,8 @@ import sys
 import time
 from subprocess import Popen, PIPE
 from importlib.util import find_spec
-from pyinjector import inject
+from pyinjector import inject, LibraryNotFoundException
+from pytest import raises
 
 INJECTION_LIB_PATH = find_spec('injection').origin
 STRING_PRINTED_FROM_LIB = b'Hello, world!'
@@ -19,3 +20,8 @@ def test_inject():
             assert process.stdout.read() == STRING_PRINTED_FROM_LIB
         finally:
             process.kill()
+
+
+def test_inject_no_such_lib():
+    with raises(LibraryNotFoundException):
+        inject(-1, 'nosuchpath.so')
