@@ -20,7 +20,19 @@ libinjector.injector_error.argtypes = ()
 libinjector.injector_error.restype = c_char_p
 
 
-class InjectorError(Exception):
+class PyInjectorError(Exception):
+    pass
+
+
+class LibraryNotFoundException(PyInjectorError):
+    def __init__(self, path: bytes):
+        self.path = path
+
+    def __str__(self):
+        return f'Could not find library: {self.path}'
+
+
+class InjectorError(PyInjectorError):
     def __init__(self, func_name: str, ret_val: int, error_str: Optional[bytes]):
         self.func_name = func_name
         self.ret_val = ret_val
@@ -78,6 +90,8 @@ class Injector:
 
 
 def inject(pid: int, library_path: AnyStr) -> None:
+    if not os.path.isfile(library_path):
+        raise LibraryNotFoundException(library_path)
     injector = Injector.attach(pid)
     try:
         injector.inject(library_path)
