@@ -1,2 +1,3 @@
 recursive-include injector *.h
+recursive-include injector/src *.c
 include LICENSE
