@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux2014_x86_64 # Need a relatively modern platform for the actions to work
     strategy:
+      fail-fast: false
       matrix:
         python-version: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310]
     steps:
@@ -40,12 +41,13 @@ jobs:
           path: audited_wheels/*
 
   test_windows:
-    runs-on: windows-latest
+    runs-on: windows-2019
     env:
       # VIRTUALENV_PIP and VIRTUALENV_WHEEL were added so we have versions that support python3.10
       VIRTUALENV_PIP: 21.3
       VIRTUALENV_WHEEL: 0.37
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
         arch: [x86, x64]
