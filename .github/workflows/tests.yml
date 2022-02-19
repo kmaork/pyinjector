@@ -41,7 +41,7 @@ jobs:
           path: audited_wheels/*
 
   test_windows:
-    runs-on: windows-latest
+    runs-on: windows-2019
     env:
       # VIRTUALENV_PIP and VIRTUALENV_WHEEL were added so we have versions that support python3.10
       VIRTUALENV_PIP: 21.3
