@@ -1,6 +1,6 @@
 import os
 from importlib.util import find_spec
-from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p
+from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p, c_void_p
 from typing import AnyStr, Callable, Any, Mapping, Type, Optional
 
 libinjector_path = find_spec('.libinjector', __package__).origin
@@ -12,7 +12,7 @@ pid_t = c_int32
 
 libinjector.injector_attach.argtypes = POINTER(injector_pointer_t), pid_t
 libinjector.injector_attach.restype = c_int32
-libinjector.injector_inject.argtypes = injector_pointer_t, c_char_p
+libinjector.injector_inject.argtypes = injector_pointer_t, c_char_p, POINTER(c_void_p)
 libinjector.injector_inject.restype = c_int32
 libinjector.injector_detach.argtypes = injector_pointer_t,
 libinjector.injector_detach.restype = c_int32
@@ -83,7 +83,7 @@ class Injector:
             library_path = library_path.encode()
         assert isinstance(library_path, bytes)
         assert os.path.isfile(library_path), f'Library not found at "{library_path.decode()}"'
-        call_c_func(libinjector.injector_inject, self.injector_p, library_path)
+        call_c_func(libinjector.injector_inject, self.injector_p, library_path, None)
 
     def detach(self) -> None:
         call_c_func(libinjector.injector_detach, self.injector_p)
