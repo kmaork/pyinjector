@@ -25,7 +25,7 @@ jobs:
         with:
           submodules: true
       - name: Install dependencies
-        run: pip install tox tox-gh-actions tox-wheel
+        run: pip install tox tox-gh-actions tox-wheel auditwheel
       - name: Test sdist with tox
         run: python -m tox
       - name: Upload sdist
