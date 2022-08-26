@@ -16,8 +16,7 @@ PyMODINIT_FUNC PyInit_injection(void) { return NULL; }
         return TRUE;
     }
 #else
-    static void init(void) __attribute__((constructor));
-
+    __attribute__((constructor))
     static void init(void) {
         const char *s = "Hello, world!";
         write(1, s, strlen(s));
