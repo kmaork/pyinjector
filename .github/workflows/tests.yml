@@ -20,7 +20,10 @@ jobs:
           - "python:3.10-alpine"
     steps:
       - name: Install packages
-        run: apk add gcc musl-dev git
+        # gcc and musl-dev needed for compiling the package
+        # git needed for checkout
+        # patchelf needed for auditwheel
+        run: apk add gcc musl-dev git patchelf
       - uses: actions/checkout@v2
         with:
           submodules: true
