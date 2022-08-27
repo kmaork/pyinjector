@@ -38,15 +38,15 @@ jobs:
           path: .tox/dist/*
       - name: Test wheel with tox
         run: python -m tox --wheel
-      - name: Audit ${{ matrix.python-version }} wheel
+      - name: Audit wheel
         run: auditwheel repair .tox/dist/* -w audited_wheels
-      - name: Upload ${{ matrix.python-version }} wheel
+      - name: Upload wheel
         uses: actions/upload-artifact@v2
         with:
           name: dist
           path: audited_wheels/*
 
-  test_linux:
+  test_manylinux:
     runs-on: ubuntu-latest
     # Need a relatively modern platform (2014) for the actions themselves to work
     container: quay.io/pypa/manylinux2014_x86_64
@@ -121,7 +121,7 @@ jobs:
 
   publish:
     if: github.event_name == 'release' && github.event.action == 'created'
-    needs: [test_windows, test_linux, test_alpine]
+    needs: [test_windows, test_manylinux, test_alpine]
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
