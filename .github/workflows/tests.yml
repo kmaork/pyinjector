@@ -5,6 +5,7 @@ on:
     types: [created]
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test_alpine:
