@@ -121,7 +121,7 @@ jobs:
 
   publish:
     if: github.event_name == 'release' && github.event.action == 'created'
-    needs: [test_windows, test_linux]
+    needs: [test_windows, test_linux, test_alpine]
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
