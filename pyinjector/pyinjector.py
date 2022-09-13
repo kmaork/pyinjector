@@ -1,6 +1,6 @@
 import os
 from importlib.util import find_spec
-from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p, c_void_p
+from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p, c_void_p, pointer
 from typing import AnyStr, Callable, Any, Mapping, Type, Optional
 
 libinjector_path = find_spec('.libinjector', __package__).origin
@@ -78,22 +78,28 @@ class Injector:
                     exception_map={-8: InjectorPermissionError})
         return cls(injector_p)
 
-    def inject(self, library_path: AnyStr) -> None:
+    def inject(self, library_path: AnyStr) -> int:
         if isinstance(library_path, str):
             library_path = library_path.encode()
         assert isinstance(library_path, bytes)
         assert os.path.isfile(library_path), f'Library not found at "{library_path.decode()}"'
-        call_c_func(libinjector.injector_inject, self.injector_p, library_path, None)
+        handle = c_void_p()
+        call_c_func(libinjector.injector_inject, self.injector_p, library_path, pointer(handle))
+        return handle.value
 
     def detach(self) -> None:
         call_c_func(libinjector.injector_detach, self.injector_p)
 
 
-def inject(pid: int, library_path: AnyStr) -> None:
+def inject(pid: int, library_path: AnyStr) -> int:
+    """
+    Inject the shared library at library_path to the process (or thread) with the given pid.
+    Return the handle to the loaded library.
+    """
     if not os.path.isfile(library_path):
         raise LibraryNotFoundException(library_path)
     injector = Injector.attach(pid)
     try:
-        injector.inject(library_path)
+        return injector.inject(library_path)
     finally:
         injector.detach()

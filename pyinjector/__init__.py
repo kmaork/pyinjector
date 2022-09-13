@@ -1,1 +1,1 @@
-from .pyinjector import inject, LibraryNotFoundException
+from .pyinjector import inject, LibraryNotFoundException, InjectorError

@@ -12,7 +12,8 @@ def parse_args(args: Optional[List[str]]) -> Namespace:
 
 def main(args: Optional[List[str]] = None) -> None:
     parsed_args = parse_args(args)
-    inject(parsed_args.pid, parsed_args.library_path)
+    handle = inject(parsed_args.pid, parsed_args.library_path)
+    print(f"Handle: {handle}")
 
 
 if __name__ == '__main__':
