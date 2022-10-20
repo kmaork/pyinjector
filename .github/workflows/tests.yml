@@ -20,6 +20,7 @@ jobs:
           - "python:3.8-alpine"
           - "python:3.9-alpine"
           - "python:3.10-alpine"
+          - "python:3.11-alpine"
     steps:
       - name: Install packages
         # gcc and musl-dev needed for compiling the package
@@ -30,7 +31,8 @@ jobs:
         with:
           submodules: true
       - name: Install dependencies
-        run: pip install tox tox-gh-actions tox-wheel auditwheel
+        # py needed for tox-wheel
+        run: pip install tox==4.0.0a9 tox-gh==0.0.3 tox-wheel==1.0.0 py==1.11.0 auditwheel==5.1.2
       - name: Test sdist with tox
         run: python -m tox
       - name: Upload sdist
@@ -55,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310]
+        python-version: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310, cp311-cp311]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -65,7 +67,8 @@ jobs:
           echo "/opt/python/${{ matrix.python-version }}/bin" >> $GITHUB_PATH
           echo $PATH
       - name: Install dependencies
-        run: pip install tox tox-gh-actions tox-wheel
+        # py needed for tox-wheel
+        run: pip install tox==4.0.0a9 tox-gh==0.0.3 tox-wheel==1.0.0 py==1.11.0
       - name: Test sdist with tox
         run: python -m tox
       - name: Upload ${{ matrix.python-version }} sdist
@@ -92,7 +95,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11.0-rc.2"]
         arch: [x86, x64]
     steps:
       - uses: actions/checkout@v2
@@ -104,8 +107,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch }}
       - name: Install dependencies
-        # virtualenv==20.0.33 because of this https://github.com/ContinuumIO/anaconda-issues/issues/10822#issuecomment-736650629
-        run: python -m pip install tox tox-gh-actions tox-wheel virtualenv==20.0.33
+        # py needed for tox-wheel
+        run: pip install tox==4.0.0a9 tox-gh==0.0.3 tox-wheel==1.0.0 py==1.11.0
       - name: Test sdist with tox
         run: python -m tox
       - name: Upload ${{ matrix.python-version }} sdist
