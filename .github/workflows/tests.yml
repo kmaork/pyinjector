@@ -1,11 +1,16 @@
 name: Tests
 
 on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Release this branch'
+        required: false
+        type: boolean
   release:
-    types: [created]
+    types: [ created ]
   push:
   pull_request:
-  workflow_dispatch:
 
 jobs:
   test_alpine:
@@ -31,19 +36,18 @@ jobs:
         with:
           submodules: true
       - name: Install dependencies
-        # py needed for tox-wheel
-        run: pip install tox==4.0.0a9 tox-gh==0.0.3 tox-wheel==1.0.0 py==1.11.0 auditwheel==5.1.2
+        run: pip install tox==4.6.3 tox-gh==1.2.0 auditwheel==5.1.2
       - name: Test sdist with tox
         run: python -m tox
       - name: Upload sdist
         uses: actions/upload-artifact@v2
         with:
           name: dist
-          path: .tox/dist/*
+          path: .tox/.pkg/dist/*
       - name: Test wheel with tox
-        run: python -m tox --wheel
+        run: python -m tox
       - name: Audit wheel
-        run: auditwheel repair .tox/dist/* -w audited_wheels
+        run: auditwheel repair .tox/.pkg/dist/* -w audited_wheels
       - name: Upload wheel
         uses: actions/upload-artifact@v2
         with:
@@ -67,19 +71,18 @@ jobs:
           echo "/opt/python/${{ matrix.python-version }}/bin" >> $GITHUB_PATH
           echo $PATH
       - name: Install dependencies
-        # py needed for tox-wheel
-        run: pip install tox==4.0.0a9 tox-gh==0.0.3 tox-wheel==1.0.0 py==1.11.0
+        run: pip install tox==4.6.3 tox-gh==1.2.0
       - name: Test sdist with tox
         run: python -m tox
       - name: Upload ${{ matrix.python-version }} sdist
         uses: actions/upload-artifact@v2
         with:
           name: dist
-          path: .tox/dist/*
+          path: .tox/.pkg/dist/*
       - name: Test wheel with tox
-        run: python -m tox --wheel
+        run: python -m tox
       - name: Audit ${{ matrix.python-version }} wheel
-        run: auditwheel repair .tox/dist/* -w audited_wheels
+        run: auditwheel repair .tox/.pkg/dist/* -w audited_wheels
       - name: Upload ${{ matrix.python-version }} wheel
         uses: actions/upload-artifact@v2
         with:
@@ -107,25 +110,24 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch }}
       - name: Install dependencies
-        # py needed for tox-wheel
-        run: pip install tox==4.0.0a9 tox-gh==0.0.3 tox-wheel==1.0.0 py==1.11.0
+        run: pip install tox==4.6.3 tox-gh==1.2.0
       - name: Test sdist with tox
         run: python -m tox
       - name: Upload ${{ matrix.python-version }} sdist
         uses: actions/upload-artifact@v2
         with:
           name: dist
-          path: .tox/dist/*
+          path: .tox/.pkg/dist/*
       - name: Test wheel with tox
-        run: python -m tox --wheel
+        run: python -m tox
       - name: Upload ${{ matrix.python-version }} wheel
         uses: actions/upload-artifact@v2
         with:
           name: dist
-          path: .tox/dist/*
+          path: .tox/.pkg/dist/*
 
   publish:
-    if: github.event_name == 'release' && github.event.action == 'created'
+    if: (github.event_name == 'release' && github.event.action == 'created') || inputs.deploy
     needs: [test_windows, test_manylinux, test_alpine]
     runs-on: ubuntu-latest
     steps:
