@@ -20,7 +20,6 @@ jobs:
       fail-fast: false
       matrix:
         container:
-          - "python:3.6-alpine"
           - "python:3.7-alpine"
           - "python:3.8-alpine"
           - "python:3.9-alpine"
@@ -61,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310, cp311-cp311]
+        python-version: [cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310, cp311-cp311]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -91,14 +90,10 @@ jobs:
 
   test_windows:
     runs-on: windows-2019
-    env:
-      # VIRTUALENV_PIP and VIRTUALENV_WHEEL were added so we have versions that support python3.10
-      VIRTUALENV_PIP: 21.3
-      VIRTUALENV_WHEEL: 0.37
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11.0-rc.2"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         arch: [x86, x64]
     steps:
       - uses: actions/checkout@v2
