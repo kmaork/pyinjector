@@ -1,3 +1,3 @@
 from setuptools import setup, Extension
 
-setup(name='injection', ext_modules=[Extension('injection', sources=['injection.c'])])
+setup(name='pyinjector_tests_injection', ext_modules=[Extension('pyinjector_tests_injection', sources=['injection.c'])])

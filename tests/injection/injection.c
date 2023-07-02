@@ -1,17 +1,16 @@
 #include <Python.h>
-PyMODINIT_FUNC PyInit_injection(void) {return NULL;}
+PyMODINIT_FUNC PyInit_pyinjector_tests_injection(void) {return NULL;}
 
 #ifdef _WIN32
     #include <windows.h>
     #include <io.h>
 
+    const char *MAGIC = "Hello, world!";
+
     BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
-        const char *s = "Hello, world!";
-        switch( fdwReason ) {
-            case DLL_PROCESS_ATTACH:
-                _write(1, s, strlen(s));
-                _close(1);
-                break;
+        if (fdwReason == DLL_PROCESS_ATTACH) {
+            _write(1, MAGIC, strlen(MAGIC));
+            _close(1);
         }
         return TRUE;
     }
