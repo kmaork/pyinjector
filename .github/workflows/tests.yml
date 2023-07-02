@@ -36,17 +36,10 @@ jobs:
           submodules: true
       - name: Install dependencies
         run: pip install tox==4.6.3 tox-gh==1.2.0 auditwheel==5.1.2
-      - name: Test sdist with tox
-        run: python -m tox
-      - name: Upload sdist
-        uses: actions/upload-artifact@v2
-        with:
-          name: dist
-          path: .tox/.pkg/dist/*
-      - name: Test wheel with tox
+      - name: Test with tox
         run: python -m tox
       - name: Audit wheel
-        run: auditwheel repair .tox/.pkg/dist/* -w audited_wheels
+        run: auditwheel repair .tox/.pkg/dist/*.whl -w audited_wheels
       - name: Upload wheel
         uses: actions/upload-artifact@v2
         with:
@@ -71,18 +64,11 @@ jobs:
           echo $PATH
       - name: Install dependencies
         run: pip install tox==4.6.3 tox-gh==1.2.0
-      - name: Test sdist with tox
-        run: python -m tox
-      - name: Upload ${{ matrix.python-version }} sdist
-        uses: actions/upload-artifact@v2
-        with:
-          name: dist
-          path: .tox/.pkg/dist/*
       - name: Test wheel with tox
         run: python -m tox
-      - name: Audit ${{ matrix.python-version }} wheel
-        run: auditwheel repair .tox/.pkg/dist/* -w audited_wheels
-      - name: Upload ${{ matrix.python-version }} wheel
+      - name: Audit wheel
+        run: auditwheel repair .tox/.pkg/dist/*.whl -w audited_wheels
+      - name: Upload wheel
         uses: actions/upload-artifact@v2
         with:
           name: dist
@@ -106,14 +92,7 @@ jobs:
           architecture: ${{ matrix.arch }}
       - name: Install dependencies
         run: pip install tox==4.6.3 tox-gh==1.2.0
-      - name: Test sdist with tox
-        run: python -m tox
-      - name: Upload ${{ matrix.python-version }} sdist
-        uses: actions/upload-artifact@v2
-        with:
-          name: dist
-          path: .tox/.pkg/dist/*
-      - name: Test wheel with tox
+      - name: Test with tox
         run: python -m tox
       - name: Upload ${{ matrix.python-version }} wheel
         uses: actions/upload-artifact@v2
