@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         run: |
           echo "/opt/python/${{ matrix.python-version }}/bin" >> $GITHUB_PATH
           echo $PATH
@@ -85,7 +85,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -94,7 +94,7 @@ jobs:
         run: pip install tox==4.6.3 tox-gh==1.2.0
       - name: Test with tox
         run: python -m tox
-      - name: Upload ${{ matrix.python-version }} wheel
+      - name: Upload wheel
         uses: actions/upload-artifact@v2
         with:
           name: dist
