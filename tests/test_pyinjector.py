@@ -12,7 +12,10 @@ TIME_TO_WAIT_FOR_INJECTION_TO_RUN = 1
 
 
 def test_inject():
-    with Popen([sys._base_executable, '-c', 'while True: pass'], stdout=PIPE) as process:
+    # In new virtualenv versions on Windows, python.exe invokes the original python.exe as a subprocess, so the
+    # injection does not affect the target python process.
+    python = getattr(sys, '_base_executable', sys.executable)
+    with Popen([python, '-c', 'while True: pass'], stdout=PIPE) as process:
         try:
             time.sleep(TIME_TO_WAIT_FOR_PROCESS_TO_INIT)
             handle = inject(process.pid, INJECTION_LIB_PATH)
