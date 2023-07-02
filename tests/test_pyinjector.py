@@ -5,18 +5,18 @@ from importlib.util import find_spec
 from pyinjector import inject, LibraryNotFoundException
 from pytest import raises
 
-INJECTION_LIB_PATH = find_spec('injection').origin
+INJECTION_LIB_PATH = find_spec('pyinjector_tests_injection').origin
 STRING_PRINTED_FROM_LIB = b'Hello, world!'
-TIME_TO_WIT_FOR_PROCESS_TO_INIT = 1
-TIME_TO_WIT_FOR_INJECTION_TO_RUN = 1
+TIME_TO_WAIT_FOR_PROCESS_TO_INIT = 1
+TIME_TO_WAIT_FOR_INJECTION_TO_RUN = 1
 
 
 def test_inject():
-    with Popen([sys.executable, '-c', 'while True: pass'], stdout=PIPE) as process:
+    with Popen([sys._base_executable, '-c', 'while True: pass'], stdout=PIPE) as process:
         try:
-            time.sleep(TIME_TO_WIT_FOR_PROCESS_TO_INIT)
+            time.sleep(TIME_TO_WAIT_FOR_PROCESS_TO_INIT)
             handle = inject(process.pid, INJECTION_LIB_PATH)
-            time.sleep(TIME_TO_WIT_FOR_INJECTION_TO_RUN)
+            time.sleep(TIME_TO_WAIT_FOR_INJECTION_TO_RUN)
             assert process.stdout.read() == STRING_PRINTED_FROM_LIB
         finally:
             process.kill()
