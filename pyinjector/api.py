@@ -1,7 +1,7 @@
 import os
 from importlib.util import find_spec
 from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p, c_void_p, pointer
-from typing import AnyStr, Callable, Any, Mapping, Type, Optional
+from typing import AnyStr, Callable, Any, Mapping, Type, Optional, Tuple
 from sys import platform
 
 libinjector_path = find_spec('.libinjector', __package__).origin
@@ -76,7 +76,7 @@ If you need to inject without root permissions, please report here:
 
 
 def call_c_func(func: Callable[..., int], *args: Any,
-                exception_map: Mapping[tuple[int, str], Type[InjectorError]] = None) -> None:
+                exception_map: Mapping[Tuple[int, str], Type[InjectorError]] = None) -> None:
     ret = func(*args)
     if ret != 0:
         exception_map = {} if exception_map is None else exception_map
