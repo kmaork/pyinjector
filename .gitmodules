@@ -1,3 +1,3 @@
 [submodule "injector"]
 	path = injector
-	url = https://github.com/kmaork/injector.git
+	url = https://github.com/kubo/injector.git
