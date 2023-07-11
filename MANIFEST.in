@@ -1,3 +1,9 @@
 recursive-include injector *.h
 recursive-include injector/src *.c
 include LICENSE
+
+# Needed for installation on Mac
+include injector/Makefile
+recursive-include injector/cmd *
+recursive-include injector/util *
+include injector/src/macos/Makefile

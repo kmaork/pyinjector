@@ -1,6 +1,11 @@
+from os import environ
+from subprocess import check_call
 from sys import platform
 from pathlib import Path
 from setuptools import setup, Extension
+from setuptools.command.develop import develop
+from setuptools.command.install import install
+
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 LIBINJECTOR_DIR = PROJECT_ROOT / 'injector'
@@ -21,7 +26,35 @@ libinjector = Extension('pyinjector.libinjector',
                         export_symbols=['injector_attach', 'injector_inject', 'injector_detach', 'injector_error'],
                         define_macros=[('EM_AARCH64', '183')])  # Needed on CentOS for some reason
 
+
+def build_executable():
+    env = environ.copy()
+    # https://developer.apple.com/forums/thread/694062#replyname-719723022
+    env["PATH"] = f"/usr/bin:{env['PATH']}"
+    check_call(["make"], cwd='injector', env=env)
+    check_call(["bash", "genkey.sh"], cwd='injector/cmd/macos-sign')
+    check_call(["bash", "sign.sh"], cwd='injector/cmd/macos-sign')
+
+
+class DevelopAndBuildExecutable(develop):
+    """Post-installation for development mode."""
+    def run(self):
+        develop.run(self)
+        build_executable()
+
+
+class InstallAndBuildExecutable(install):
+    """Post-installation for installation mode."""
+    def run(self):
+        install.run(self)
+        build_executable()
+
+
 setup(
     ext_modules=[libinjector],
-    entry_points={"console_scripts": ["inject=pyinjector.__main__:main"]}
+    entry_points={"console_scripts": ["inject=pyinjector.__main__:main"]},
+    cmdclass={
+        'develop': DevelopAndBuildExecutable,
+        'install': InstallAndBuildExecutable,
+    } if platform == "darwin" else {},
 )
