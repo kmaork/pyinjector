@@ -100,6 +100,30 @@ jobs:
           name: dist
           path: .tox/.pkg/dist/*
 
+  test_mac:
+    runs-on: macos-13
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.11" ]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox==4.6.3
+      - name: Test with tox
+        run: sudo python -m tox -e sdist
+      - name: Upload dist
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: .tox/.pkg/dist/*
+
   publish:
     if: (github.event_name == 'release' && github.event.action == 'created') || inputs.deploy
     needs: [test_windows, test_manylinux, test_alpine]

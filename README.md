@@ -34,4 +34,4 @@ inject(pid, path_to_so_file)
 ### How it works
 We build [kubo/injector](https://github.com/kubo/injector) as a C-extension and use its interface using `ctypes`.
 [kubo/injector](https://github.com/kubo/injector) is an awesome repo allowing to inject shared libraries into running
-processes both on windows (`CreateRemoteThread`+`LoadLibrary`) and on linux (`ptrace`).
+processes both on Windows (`CreateRemoteThread`), Linux (`ptrace`), and Mac (`task_for_pid`).

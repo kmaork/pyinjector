@@ -2,10 +2,14 @@ from sys import platform
 from pathlib import Path
 from setuptools import setup, Extension
 
-WINDOWS = platform == 'win32'
 PROJECT_ROOT = Path(__file__).parent.resolve()
 LIBINJECTOR_DIR = PROJECT_ROOT / 'injector'
-LIBINJECTOR_SRC = LIBINJECTOR_DIR / 'src' / ('windows' if WINDOWS else 'linux')
+DIR_MAPPING = {
+    'linux': 'linux',
+    'win32': 'windows',
+    'darwin': 'macos',
+}
+LIBINJECTOR_SRC = LIBINJECTOR_DIR / 'src' / DIR_MAPPING[platform]
 LIBINJECTOR_WRAPPER = PROJECT_ROOT / 'libinjector.c'
 SOURCES = [str(c.relative_to(PROJECT_ROOT))
            for c in [LIBINJECTOR_WRAPPER, *LIBINJECTOR_SRC.iterdir()]
