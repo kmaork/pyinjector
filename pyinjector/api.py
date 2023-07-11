@@ -2,6 +2,7 @@ import os
 from importlib.util import find_spec
 from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p, c_void_p, pointer
 from typing import AnyStr, Callable, Any, Mapping, Type, Optional
+from sys import platform
 
 libinjector_path = find_spec('.libinjector', __package__).origin
 libinjector = CDLL(libinjector_path)
@@ -38,31 +39,48 @@ class InjectorError(PyInjectorError):
         self.ret_val = ret_val
         self.error_str = error_str.decode()
 
+    def _get_extra_explanation(self):
+        return None
+
     def __str__(self):
-        explanation = 'see error code definition in injector/include/injector.h' \
-            if self.error_str is None else self.error_str
+        extra = self._get_extra_explanation()
+        explanation = \
+            'see error code definition in injector/include/injector.h' if self.error_str is None else \
+                (self.error_str if extra is None else '{}\n{}'.format(self.error_str, extra))
         return '{} returned {}: {}'.format(self.func_name, self.ret_val, explanation)
 
 
-class InjectorPermissionError(InjectorError):
-    def __str__(self):
-        return (super().__str__() +
-                '\nFailed attaching to process due to permission error.\n'
-                'This is most likely due to ptrace scope limitations applied to the kernel for security purposes.\n'
-                'Possible solutions:\n'
-                ' - Rerun as root\n'
-                ' - Temporarily remove ptrace scope limitations using '
-                '`echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope`\n'
-                ' - Persistently remove ptrace scope limitations by editing /etc/sysctl.d/10-ptrace.conf\n'
-                'More details can be found here: https://stackoverflow.com/q/19215177/2907819')
+class LinuxInjectorPermissionError(InjectorError):
+    def _get_extra_explanation(self):
+        return """Failed attaching to process due to permission error.
+This is most likely due to ptrace scope limitations applied to the kernel for security purposes.
+Possible solutions:
+ - Rerun as root
+ - Temporarily remove ptrace scope limitations usin
+`echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope`
+ - Persistently remove ptrace scope limitations by editing /etc/sysctl.d/10-ptrace.conf
+More details can be found here: https://stackoverflow.com/q/19215177/2907819')"""
+
+
+class MacUnknownInjectorError(InjectorError):
+    def _get_extra_explanation(self):
+        issue_link = "https://github.com/kmaork/pyinjector/issues/26"
+        return (
+            """Mac restricts injection for security reasons. Please report this error in the issue:
+{}""".format(issue_link)
+            if os.geteuid() == 0 else
+            """Mac restricts injection for security reasons. Please try rerunning as root.
+If you need to inject without root permissions, please report here:
+{}""".format(issue_link)
+        )
 
 
 def call_c_func(func: Callable[..., int], *args: Any,
-                exception_map: Mapping[int, Type[InjectorError]] = None) -> None:
+                exception_map: Mapping[tuple[int, str], Type[InjectorError]] = None) -> None:
     ret = func(*args)
     if ret != 0:
         exception_map = {} if exception_map is None else exception_map
-        exception_cls = exception_map.get(ret, InjectorError)
+        exception_cls = exception_map.get((ret, platform), InjectorError)
         raise exception_cls(func.__name__, ret, libinjector.injector_error())
 
 
@@ -75,7 +93,8 @@ class Injector:
         assert isinstance(pid, int)
         injector_p = injector_pointer_t()
         call_c_func(libinjector.injector_attach, byref(injector_p), pid,
-                    exception_map={-8: InjectorPermissionError})
+                    exception_map={(-8, 'linux'): LinuxInjectorPermissionError,
+                                   (-1, 'darwin'): MacUnknownInjectorError})
         return cls(injector_p)
 
     def inject(self, library_path: AnyStr) -> int:

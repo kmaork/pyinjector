@@ -1,6 +1,8 @@
+import sys
 from argparse import ArgumentParser, Namespace
 from typing import List, Optional
 from pyinjector import inject
+from pyinjector.api import PyInjectorError
 
 
 def parse_args(args: Optional[List[str]]) -> Namespace:
@@ -12,8 +14,12 @@ def parse_args(args: Optional[List[str]]) -> Namespace:
 
 def main(args: Optional[List[str]] = None) -> None:
     parsed_args = parse_args(args)
-    handle = inject(parsed_args.pid, parsed_args.library_path)
-    print(f"Handle: {handle}")
+    try:
+        handle = inject(parsed_args.pid, parsed_args.library_path)
+    except PyInjectorError as e:
+        print("pyinjector failed to inject: {}".format(e), file=sys.stderr)
+    else:
+        print(f"Handle: {handle}")
 
 
 if __name__ == '__main__':
