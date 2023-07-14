@@ -1,3 +1,5 @@
+# Must include all injector headers and source files, so the source distribution could be installed on any platform,
+# regardless of the platform where it was built.
 recursive-include injector *.h
 recursive-include injector/src *.c
 include LICENSE
