@@ -204,9 +204,13 @@ PyMODINIT_FUNC PyInit_injector(void)
         return NULL;
     }
 
-    InjectorErrorTypeObject = (PyObject *)(&InjectorErrorType);
-    Py_INCREF(&InjectorErrorTypeObject);
-    PyModule_AddObject(m, "InjectorError", InjectorErrorTypeObject);
+    InjectorErrorTypeObject = (PyObject *)&InjectorErrorType;
+    Py_INCREF(InjectorErrorTypeObject);
+    if (PyModule_AddObject(m, "InjectorError", InjectorErrorTypeObject) < 0) {
+        Py_DECREF(InjectorErrorTypeObject);
+        Py_DECREF(m);
+        return NULL;
+    }
 
     return m;
 }

@@ -1,8 +1,9 @@
 from __future__ import annotations
 import os
-from ctypes import byref, c_void_p, pointer
-from typing import AnyStr, Callable, Any, Mapping, Type, Optional, Tuple
+from typing import AnyStr, Optional
 from sys import platform
+
+from .injector import Injector, InjectorError
 
 
 class PyInjectorError(Exception):
@@ -17,11 +18,9 @@ class LibraryNotFoundException(PyInjectorError):
         return f'Could not find library: {self.path}'
 
 
-class InjectorError(PyInjectorError):
-    def __init__(self, func_name: str, ret_val: int, error_str: Optional[bytes]):
-        self.func_name = func_name
-        self.ret_val = ret_val
-        self.error_str = error_str.decode()
+class InjectorFailed(PyInjectorError):
+    def __init__(self, error: InjectorError):
+        self.error = error
 
     def _get_extra_explanation(self):
         return None
@@ -29,9 +28,9 @@ class InjectorError(PyInjectorError):
     def __str__(self):
         extra = self._get_extra_explanation()
         explanation = \
-            'see error code definition in injector/include/injector.h' if self.error_str is None else \
-                (self.error_str if extra is None else '{}\n{}'.format(self.error_str, extra))
-        return '{} returned {}: {}'.format(self.func_name, self.ret_val, explanation)
+            'see error code definition in injector/include/injector.h' if self.error.error_string is None else \
+                (self.error.error_string if extra is None else '{}\n{}'.format(self.error.error_string, extra))
+        return 'Injector failed with {}: {}'.format(self.error.error_number, explanation)
 
 
 class LinuxInjectorPermissionError(InjectorError):
@@ -59,50 +58,32 @@ If you need to inject without root permissions, please report here:
         )
 
 
-def call_c_func(func: Callable[..., int], *args: Any,
-                exception_map: Mapping[Tuple[int, str], Type[InjectorError]] = None) -> None:
-    ret = func(*args)
-    if ret != 0:
-        exception_map = {} if exception_map is None else exception_map
-        exception_cls = exception_map.get((ret, platform), InjectorError)
-        raise exception_cls(func.__name__, ret, libinjector.injector_error())
-
-
-class Injector:
-    def __init__(self, injector_p: injector_pointer_t):
-        self.injector_p = injector_p
-
-    @classmethod
-    def attach(cls, pid: int) -> 'Injector':
-        assert isinstance(pid, int)
-        injector_p = injector_pointer_t()
-        call_c_func(libinjector.injector_attach, byref(injector_p), pid,
-                    exception_map={(-8, 'linux'): LinuxInjectorPermissionError,
-                                   (-1, 'darwin'): MacUnknownInjectorError})
-        return cls(injector_p)
-
-    def inject(self, library_path: AnyStr) -> int:
-        if isinstance(library_path, str):
-            library_path = library_path.encode()
-        assert isinstance(library_path, bytes)
-        assert os.path.isfile(library_path), f'Library not found at "{library_path.decode()}"'
-        handle = c_void_p()
-        call_c_func(libinjector.injector_inject, self.injector_p, library_path, pointer(handle))
-        return handle.value
-
-    def detach(self) -> None:
-        call_c_func(libinjector.injector_detach, self.injector_p)
-
-
 def inject(pid: int, library_path: AnyStr) -> int:
     """
     Inject the shared library at library_path to the process (or thread) with the given pid.
     Return the handle to the loaded library.
     """
+    if isinstance(library_path, str):
+        library_path = library_path.encode()
+    assert isinstance(library_path, bytes)
     if not os.path.isfile(library_path):
         raise LibraryNotFoundException(library_path)
-    injector = Injector.attach(pid)
+
+    exception_map = {(-8, 'linux'): LinuxInjectorPermissionError,
+                     (-1, 'darwin'): MacUnknownInjectorError}
+    injector = Injector()
     try:
-        return injector.inject(library_path)
-    finally:
-        injector.detach()
+        injector.attach(pid)
+        try:
+            return injector.inject(library_path)
+        finally:
+            injector.detach()
+    except InjectorError as e:
+        exception_cls = exception_map.get((e.error_number, platform), InjectorFailed)
+        raise exception_cls(e) from e
+
+# todo:
+#   "# If defined(__APPLE__) || defined(__linux)" in pyi
+#   what happens when no error string?
+#   tests
+#   make attach a class method that returns an injector instance? what happens if we call non attach methods first?
