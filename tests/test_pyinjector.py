@@ -29,3 +29,7 @@ def test_inject():
 def test_inject_no_such_lib():
     with raises(LibraryNotFoundException):
         inject(-1, 'nosuchpath.so')
+
+
+def test_inject_no_such_pid():
+    inject(-1, INJECTION_LIB_PATH)

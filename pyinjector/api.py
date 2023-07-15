@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-from typing import AnyStr, Optional
+from typing import AnyStr
 from sys import platform
 
 from .injector import Injector, InjectorError
@@ -87,3 +87,5 @@ def inject(pid: int, library_path: AnyStr) -> int:
 #   what happens when no error string?
 #   tests
 #   make attach a class method that returns an injector instance? what happens if we call non attach methods first?
+#   read all that garbage c code... is the __new__ necessary?
+#   handle empty string in injector error

@@ -1,5 +1,8 @@
 #include <Python.h>
+#include <stddef.h>
 #include "injector.h"
+#include <structmember.h>
+
 
 typedef struct {
     PyObject_HEAD
@@ -19,18 +22,13 @@ static void Injector_dealloc(Injector* self)
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
-static PyObject* InjectorError_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-    InjectorError *self = (InjectorError *)type->tp_alloc(type, 0);
-    self->error_number = 0;
-    self->error_string = NULL;
-    return (PyObject *)self;
-}
-
 static int InjectorError_init(InjectorError *self, PyObject *args, PyObject *kwds)
 {
-    if (!PyArg_ParseTuple(args, "is", &self->error_number, &self->error_string))
+    char *temp_error_string;
+    if (!PyArg_ParseTuple(args, "is", &self->error_number, &temp_error_string))
         return -1;
+
+    self->error_string = strdup(temp_error_string);
 
     return 0;
 }
@@ -69,13 +67,15 @@ static PyObject *Injector_attach(Injector *self, PyObject *args)
 
 static PyObject *Injector_inject(Injector *self, PyObject *args)
 {
-    const char *path;
+    Py_buffer buffer;
     void *handle;
     int result;
 
-    if (!PyArg_ParseTuple(args, "s", &path)) {
+    if (!PyArg_ParseTuple(args, "y*", &buffer)) {
         return NULL;
     }
+
+    char* path = buffer.buf;
 
     result = injector_inject(self->injector, path, &handle);
     if (result != INJERR_SUCCESS) {
@@ -136,6 +136,12 @@ static PyObject *Injector_detach(Injector *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+static void InjectorError_dealloc(InjectorError* self)
+{
+    free(self->error_string);
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
 static PyMethodDef Injector_methods[] = {
     {"attach", (PyCFunction)Injector_attach, METH_VARARGS, "Attach the injector to a process."},
     {"inject", (PyCFunction)Injector_inject, METH_VARARGS, "Inject a shared library into the process."},
@@ -159,21 +165,22 @@ static PyTypeObject InjectorType = {
     .tp_methods = Injector_methods,
 };
 
-static PyMethodDef InjectorError_methods[] = {
-    {NULL}  /* Sentinel */
+static PyMemberDef InjectorError_members[] = {
+    {"error_string", T_STRING, offsetof(InjectorError, error_string), 0},
+    {"error_number", T_INT, offsetof(InjectorError, error_number), 0},
+    {NULL},  /* Sentinel */
 };
 
 static PyTypeObject InjectorErrorType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "injector.InjectorError",
-    .tp_doc = "Injector error objects",
     .tp_basicsize = sizeof(InjectorError),
     .tp_itemsize = 0,
     .tp_str = (reprfunc)InjectorError_str,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-    .tp_new = InjectorError_new,
     .tp_init = (initproc)InjectorError_init,
-    .tp_methods = InjectorError_methods,
+    .tp_members = InjectorError_members,
+    .tp_dealloc = (destructor)InjectorError_dealloc,
 };
 
 static PyModuleDef injectormodule = {
@@ -186,6 +193,8 @@ static PyModuleDef injectormodule = {
 PyMODINIT_FUNC PyInit_injector(void)
 {
     PyObject* m;
+
+    InjectorErrorType.tp_base = (PyObject *)PyExc_Exception;
 
     if (PyType_Ready(&InjectorType) < 0)
         return NULL;
