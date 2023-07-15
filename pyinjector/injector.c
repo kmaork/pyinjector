@@ -3,39 +3,22 @@
 #include "injector.h"
 #include <structmember.h>
 
+static PyObject *InjectorException;
 
 typedef struct {
     PyObject_HEAD
     injector_t *injector;
 } Injector;
 
-typedef struct {
-    PyObject_HEAD
-    int error_number;
-    const char *error_string;
-} InjectorError;
-
-static PyObject* InjectorErrorTypeObject = NULL;
+void Injector_raise(int result) {
+    PyObject* error_args = Py_BuildValue("is", result, injector_error());
+    PyErr_SetObject(InjectorException, error_args);
+    Py_DECREF(error_args);
+}
 
 static void Injector_dealloc(Injector* self)
 {
     Py_TYPE(self)->tp_free((PyObject*)self);
-}
-
-static int InjectorError_init(InjectorError *self, PyObject *args, PyObject *kwds)
-{
-    char *temp_error_string;
-    if (!PyArg_ParseTuple(args, "is", &self->error_number, &temp_error_string))
-        return -1;
-
-    self->error_string = strdup(temp_error_string);
-
-    return 0;
-}
-
-static PyObject* InjectorError_str(InjectorError *self)
-{
-    return PyUnicode_FromFormat("%s (error number %d)", self->error_string, self->error_number);
 }
 
 static PyObject *Injector_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
@@ -58,7 +41,7 @@ static PyObject *Injector_attach(Injector *self, PyObject *args)
 
     result = injector_attach(&(self->injector), pid);
     if (result != INJERR_SUCCESS) {
-        PyErr_SetObject(InjectorErrorTypeObject, Py_BuildValue("is", result, injector_error()));
+        Injector_raise(result);
         return NULL;
     }
 
@@ -79,7 +62,7 @@ static PyObject *Injector_inject(Injector *self, PyObject *args)
 
     result = injector_inject(self->injector, path, &handle);
     if (result != INJERR_SUCCESS) {
-        PyErr_SetObject(InjectorErrorTypeObject, Py_BuildValue("is", result, injector_error()));
+        Injector_raise(result);
         return NULL;
     }
 
@@ -99,7 +82,7 @@ static PyObject *Injector_call(Injector *self, PyObject *args)
 
     result = injector_call(self->injector, handle, name);
     if (result != INJERR_SUCCESS) {
-        PyErr_SetObject(InjectorErrorTypeObject, Py_BuildValue("is", result, injector_error()));
+        Injector_raise(result);
         return NULL;
     }
 
@@ -118,7 +101,7 @@ static PyObject *Injector_uninject(Injector *self, PyObject *args)
 
     result = injector_uninject(self->injector, handle);
     if (result != INJERR_SUCCESS) {
-        PyErr_SetObject(InjectorErrorTypeObject, Py_BuildValue("is", result, injector_error()));
+        Injector_raise(result);
         return NULL;
     }
 
@@ -129,17 +112,11 @@ static PyObject *Injector_detach(Injector *self, PyObject *args)
 {
     int result = injector_detach(self->injector);
     if (result != INJERR_SUCCESS) {
-        PyErr_SetObject(InjectorErrorTypeObject, Py_BuildValue("is", result, injector_error()));
+        Injector_raise(result);
         return NULL;
     }
 
     Py_RETURN_NONE;
-}
-
-static void InjectorError_dealloc(InjectorError* self)
-{
-    free(self->error_string);
-    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 static PyMethodDef Injector_methods[] = {
@@ -165,24 +142,6 @@ static PyTypeObject InjectorType = {
     .tp_methods = Injector_methods,
 };
 
-static PyMemberDef InjectorError_members[] = {
-    {"error_string", T_STRING, offsetof(InjectorError, error_string), 0},
-    {"error_number", T_INT, offsetof(InjectorError, error_number), 0},
-    {NULL},  /* Sentinel */
-};
-
-static PyTypeObject InjectorErrorType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "injector.InjectorError",
-    .tp_basicsize = sizeof(InjectorError),
-    .tp_itemsize = 0,
-    .tp_str = (reprfunc)InjectorError_str,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-    .tp_init = (initproc)InjectorError_init,
-    .tp_members = InjectorError_members,
-    .tp_dealloc = (destructor)InjectorError_dealloc,
-};
-
 static PyModuleDef injectormodule = {
     PyModuleDef_HEAD_INIT,
     .m_name = "injector",
@@ -194,12 +153,7 @@ PyMODINIT_FUNC PyInit_injector(void)
 {
     PyObject* m;
 
-    InjectorErrorType.tp_base = (PyObject *)PyExc_Exception;
-
     if (PyType_Ready(&InjectorType) < 0)
-        return NULL;
-
-    if (PyType_Ready(&InjectorErrorType) < 0)
         return NULL;
 
     m = PyModule_Create(&injectormodule);
@@ -213,13 +167,9 @@ PyMODINIT_FUNC PyInit_injector(void)
         return NULL;
     }
 
-    InjectorErrorTypeObject = (PyObject *)&InjectorErrorType;
-    Py_INCREF(InjectorErrorTypeObject);
-    if (PyModule_AddObject(m, "InjectorError", InjectorErrorTypeObject) < 0) {
-        Py_DECREF(InjectorErrorTypeObject);
-        Py_DECREF(m);
-        return NULL;
-    }
+    InjectorException = PyErr_NewException("injector.InjectorException", NULL, NULL);
+    Py_INCREF(InjectorException);
+    PyModule_AddObject(m, "InjectorException", InjectorException);
 
     return m;
 }

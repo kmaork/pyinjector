@@ -2,10 +2,12 @@ import sys
 import time
 from subprocess import Popen, PIPE
 from importlib.util import find_spec
-from pyinjector import inject, LibraryNotFoundException
+from pyinjector import inject, LibraryNotFoundException, InjectorError
 from pytest import raises
 
-INJECTION_LIB_PATH = find_spec('pyinjector_tests_injection').origin
+INJECTION_LIB_SPEC = find_spec('pyinjector_tests_injection')
+assert INJECTION_LIB_SPEC is not None, 'Could not find pyinjector_tests_injection'
+INJECTION_LIB_PATH = INJECTION_LIB_SPEC.origin
 STRING_PRINTED_FROM_LIB = b'Hello, world!'
 TIME_TO_WAIT_FOR_PROCESS_TO_INIT = 1
 TIME_TO_WAIT_FOR_INJECTION_TO_RUN = 1
@@ -32,4 +34,6 @@ def test_inject_no_such_lib():
 
 
 def test_inject_no_such_pid():
-    inject(-1, INJECTION_LIB_PATH)
+    with raises(InjectorError) as excinfo:
+        inject(-1, INJECTION_LIB_PATH)
+    assert excinfo.value.ret_val == -3

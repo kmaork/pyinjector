@@ -1,4 +1,5 @@
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
+from sys import platform
 
 
 class Injector:
@@ -8,13 +9,9 @@ class Injector:
     def inject(self, path: bytes) -> Any: ...
     def uninject(self, handle: Any) -> None: ...
     def detach(self) -> None: ...
+    if platform == "linux" or platform == "darwin":
+        def call(self, handle: Any, name: str) -> None: ...
 
-    # If defined(__APPLE__) || defined(__linux)
-    def call(self, handle: Any, name: str) -> None: ...
 
-class InjectorError(Exception):
-    error_number: int
-    error_string: Optional[str]
-
-    def __init__(self, error_number: int, error_string: str) -> None: ...
-    def __str__(self) -> str: ...
+class InjectorException(Exception):
+    args: Tuple[int, Optional[str]]

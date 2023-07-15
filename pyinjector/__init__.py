@@ -1,4 +1,4 @@
-from .api import inject, LibraryNotFoundException, InjectorError
+from .api import inject, LibraryNotFoundException, PyInjectorError, InjectorError
 
 from types import ModuleType
 

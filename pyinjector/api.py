@@ -3,7 +3,7 @@ import os
 from typing import AnyStr
 from sys import platform
 
-from .injector import Injector, InjectorError
+from .injector import Injector, InjectorException
 
 
 class PyInjectorError(Exception):
@@ -18,9 +18,9 @@ class LibraryNotFoundException(PyInjectorError):
         return f'Could not find library: {self.path}'
 
 
-class InjectorFailed(PyInjectorError):
-    def __init__(self, error: InjectorError):
-        self.error = error
+class InjectorError(PyInjectorError):
+    def __init__(self, error: InjectorException):
+        self.ret_val, self.error_str = error.args
 
     def _get_extra_explanation(self):
         return None
@@ -28,9 +28,9 @@ class InjectorFailed(PyInjectorError):
     def __str__(self):
         extra = self._get_extra_explanation()
         explanation = \
-            'see error code definition in injector/include/injector.h' if self.error.error_string is None else \
-                (self.error.error_string if extra is None else '{}\n{}'.format(self.error.error_string, extra))
-        return 'Injector failed with {}: {}'.format(self.error.error_number, explanation)
+            'see error code definition in injector/include/injector.h' if self.error_str is None else \
+                (self.error_str if extra is None else '{}\n{}'.format(self.error_str, extra))
+        return 'Injector failed with {}: {}'.format(self.ret_val, explanation)
 
 
 class LinuxInjectorPermissionError(InjectorError):
@@ -64,10 +64,12 @@ def inject(pid: int, library_path: AnyStr) -> int:
     Return the handle to the loaded library.
     """
     if isinstance(library_path, str):
-        library_path = library_path.encode()
-    assert isinstance(library_path, bytes)
-    if not os.path.isfile(library_path):
-        raise LibraryNotFoundException(library_path)
+        encoded_library_path = library_path.encode()
+    else:
+        encoded_library_path = library_path
+    assert isinstance(encoded_library_path, bytes)
+    if not os.path.isfile(encoded_library_path):
+        raise LibraryNotFoundException(encoded_library_path)
 
     exception_map = {(-8, 'linux'): LinuxInjectorPermissionError,
                      (-1, 'darwin'): MacUnknownInjectorError}
@@ -75,17 +77,14 @@ def inject(pid: int, library_path: AnyStr) -> int:
     try:
         injector.attach(pid)
         try:
-            return injector.inject(library_path)
+            return injector.inject(encoded_library_path)
         finally:
             injector.detach()
-    except InjectorError as e:
-        exception_cls = exception_map.get((e.error_number, platform), InjectorFailed)
+    except InjectorException as e:
+        exception_cls = exception_map.get((e.args[0], platform), InjectorError)
         raise exception_cls(e) from e
 
 # todo:
 #   "# If defined(__APPLE__) || defined(__linux)" in pyi
-#   what happens when no error string?
-#   tests
 #   make attach a class method that returns an injector instance? what happens if we call non attach methods first?
-#   read all that garbage c code... is the __new__ necessary?
-#   handle empty string in injector error
+#   read all that garbage c code...
