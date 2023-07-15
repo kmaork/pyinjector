@@ -17,7 +17,7 @@ def main(args: Optional[List[str]] = None) -> None:
     try:
         handle = inject(parsed_args.pid, parsed_args.library_path)
     except PyInjectorError as e:
-        print("pyinjector failed to inject: {}".format(e), file=sys.stderr)
+        print(f"pyinjector failed to inject: {e}", file=sys.stderr)
     else:
         print(f"Handle: {handle}")
 

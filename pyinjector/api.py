@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-from typing import AnyStr
+from typing import AnyStr, Optional
 from sys import platform
 
 from .injector import Injector, InjectorException
@@ -19,8 +19,10 @@ class LibraryNotFoundException(PyInjectorError):
 
 
 class InjectorError(PyInjectorError):
-    def __init__(self, error: InjectorException):
-        self.ret_val, self.error_str = error.args
+    def __init__(self, func_name: str, ret_val: int, error_str: Optional[str]):
+        self.func_name = func_name
+        self.ret_val = ret_val
+        self.error_str = error_str
 
     def _get_extra_explanation(self):
         return None
@@ -29,8 +31,8 @@ class InjectorError(PyInjectorError):
         extra = self._get_extra_explanation()
         explanation = \
             'see error code definition in injector/include/injector.h' if self.error_str is None else \
-                (self.error_str if extra is None else '{}\n{}'.format(self.error_str, extra))
-        return 'Injector failed with {}: {}'.format(self.ret_val, explanation)
+                (self.error_str if extra is None else f'{self.error_str}\n{extra}')
+        return f'Injector failed with {self.ret_val} calling {self.func_name}: {explanation}'
 
 
 class LinuxInjectorPermissionError(InjectorError):
@@ -49,12 +51,11 @@ class MacUnknownInjectorError(InjectorError):
     def _get_extra_explanation(self):
         issue_link = "https://github.com/kmaork/pyinjector/issues/26"
         return (
-            """Mac restricts injection for security reasons. Please report this error in the issue:
-{}""".format(issue_link)
+            f"Mac restricts injection for security reasons. Please report this error in the issue:\n{issue_link}"
             if os.geteuid() == 0 else
-            """Mac restricts injection for security reasons. Please try rerunning as root.
+            f"""Mac restricts injection for security reasons. Please try rerunning as root.
 If you need to inject without root permissions, please report here:
-{}""".format(issue_link)
+{issue_link}"""
         )
 
 
@@ -81,8 +82,9 @@ def inject(pid: int, library_path: AnyStr) -> int:
         finally:
             injector.detach()
     except InjectorException as e:
-        exception_cls = exception_map.get((e.args[0], platform), InjectorError)
-        raise exception_cls(e) from e
+        func_name, ret_val, error_str = e.args
+        exception_cls = exception_map.get((ret_val, platform), InjectorError)
+        raise exception_cls(func_name, ret_val, error_str) from e
 
 # todo:
 #   "# If defined(__APPLE__) || defined(__linux)" in pyi

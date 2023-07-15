@@ -14,4 +14,4 @@ class Injector:
 
 
 class InjectorException(Exception):
-    args: Tuple[int, Optional[str]]
+    args: Tuple[str, int, Optional[str]]

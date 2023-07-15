@@ -10,8 +10,8 @@ typedef struct {
     injector_t *injector;
 } Injector;
 
-void Injector_raise(int result) {
-    PyObject* error_args = Py_BuildValue("is", result, injector_error());
+void Injector_raise(char* func_name, int result) {
+    PyObject* error_args = Py_BuildValue("sis", func_name, result, injector_error());
     PyErr_SetObject(InjectorException, error_args);
     Py_DECREF(error_args);
 }
@@ -41,7 +41,7 @@ static PyObject *Injector_attach(Injector *self, PyObject *args)
 
     result = injector_attach(&(self->injector), pid);
     if (result != INJERR_SUCCESS) {
-        Injector_raise(result);
+        Injector_raise("injector_attach", result);
         return NULL;
     }
 
@@ -62,7 +62,7 @@ static PyObject *Injector_inject(Injector *self, PyObject *args)
 
     result = injector_inject(self->injector, path, &handle);
     if (result != INJERR_SUCCESS) {
-        Injector_raise(result);
+        Injector_raise("injector_inject", result);
         return NULL;
     }
 
@@ -82,7 +82,7 @@ static PyObject *Injector_call(Injector *self, PyObject *args)
 
     result = injector_call(self->injector, handle, name);
     if (result != INJERR_SUCCESS) {
-        Injector_raise(result);
+        Injector_raise("injector_call", result);
         return NULL;
     }
 
@@ -101,7 +101,7 @@ static PyObject *Injector_uninject(Injector *self, PyObject *args)
 
     result = injector_uninject(self->injector, handle);
     if (result != INJERR_SUCCESS) {
-        Injector_raise(result);
+        Injector_raise("injector_uninject", result);
         return NULL;
     }
 
@@ -112,7 +112,7 @@ static PyObject *Injector_detach(Injector *self, PyObject *args)
 {
     int result = injector_detach(self->injector);
     if (result != INJERR_SUCCESS) {
-        Injector_raise(result);
+        Injector_raise("injector_detach", result);
         return NULL;
     }
 
