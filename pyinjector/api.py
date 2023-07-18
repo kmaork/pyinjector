@@ -1,24 +1,10 @@
+from __future__ import annotations
 import os
-from importlib.util import find_spec
-from ctypes import CDLL, Structure, POINTER, c_int32, byref, c_char_p, c_void_p, pointer
-from typing import AnyStr, Callable, Any, Mapping, Type, Optional, Tuple
+from contextlib import contextmanager
+from typing import AnyStr, Optional
 from sys import platform
 
-libinjector_path = find_spec('.libinjector', __package__).origin
-libinjector = CDLL(libinjector_path)
-
-injector_t = type('injector_t', (Structure,), {})
-injector_pointer_t = POINTER(injector_t)
-pid_t = c_int32
-
-libinjector.injector_attach.argtypes = POINTER(injector_pointer_t), pid_t
-libinjector.injector_attach.restype = c_int32
-libinjector.injector_inject.argtypes = injector_pointer_t, c_char_p, POINTER(c_void_p)
-libinjector.injector_inject.restype = c_int32
-libinjector.injector_detach.argtypes = injector_pointer_t,
-libinjector.injector_detach.restype = c_int32
-libinjector.injector_error.argtypes = ()
-libinjector.injector_error.restype = c_char_p
+from .injector import Injector, InjectorException
 
 
 class PyInjectorError(Exception):
@@ -34,10 +20,10 @@ class LibraryNotFoundException(PyInjectorError):
 
 
 class InjectorError(PyInjectorError):
-    def __init__(self, func_name: str, ret_val: int, error_str: Optional[bytes]):
+    def __init__(self, func_name: str, ret_val: int, error_str: Optional[str]):
         self.func_name = func_name
         self.ret_val = ret_val
-        self.error_str = error_str.decode()
+        self.error_str = error_str
 
     def _get_extra_explanation(self):
         return None
@@ -46,8 +32,8 @@ class InjectorError(PyInjectorError):
         extra = self._get_extra_explanation()
         explanation = \
             'see error code definition in injector/include/injector.h' if self.error_str is None else \
-                (self.error_str if extra is None else '{}\n{}'.format(self.error_str, extra))
-        return '{} returned {}: {}'.format(self.func_name, self.ret_val, explanation)
+                (self.error_str if extra is None else f'{self.error_str}\n{extra}')
+        return f'Injector failed with {self.ret_val} calling {self.func_name}: {explanation}'
 
 
 class LinuxInjectorPermissionError(InjectorError):
@@ -66,59 +52,46 @@ class MacUnknownInjectorError(InjectorError):
     def _get_extra_explanation(self):
         issue_link = "https://github.com/kmaork/pyinjector/issues/26"
         return (
-            """Mac restricts injection for security reasons. Please report this error in the issue:
-{}""".format(issue_link)
+            f"Mac restricts injection for security reasons. Please report this error in the issue:\n{issue_link}"
             if os.geteuid() == 0 else
-            """Mac restricts injection for security reasons. Please try rerunning as root.
+            f"""Mac restricts injection for security reasons. Please try rerunning as root.
 If you need to inject without root permissions, please report here:
-{}""".format(issue_link)
+{issue_link}"""
         )
 
 
-def call_c_func(func: Callable[..., int], *args: Any,
-                exception_map: Mapping[Tuple[int, str], Type[InjectorError]] = None) -> None:
-    ret = func(*args)
-    if ret != 0:
-        exception_map = {} if exception_map is None else exception_map
-        exception_cls = exception_map.get((ret, platform), InjectorError)
-        raise exception_cls(func.__name__, ret, libinjector.injector_error())
+@contextmanager
+def attach(pid: int):
+    exception_map = {(-8, 'linux'): LinuxInjectorPermissionError,
+                     (-1, 'darwin'): MacUnknownInjectorError}
+    injector = Injector()
+    try:
+        injector.attach(pid)
+        try:
+            yield injector
+        finally:
+            injector.detach()
+    except InjectorException as e:
+        func_name, ret_val, error_str = e.args
+        exception_cls = exception_map.get((ret_val, platform), InjectorError)
+        raise exception_cls(func_name, ret_val, error_str) from e
 
 
-class Injector:
-    def __init__(self, injector_p: injector_pointer_t):
-        self.injector_p = injector_p
-
-    @classmethod
-    def attach(cls, pid: int) -> 'Injector':
-        assert isinstance(pid, int)
-        injector_p = injector_pointer_t()
-        call_c_func(libinjector.injector_attach, byref(injector_p), pid,
-                    exception_map={(-8, 'linux'): LinuxInjectorPermissionError,
-                                   (-1, 'darwin'): MacUnknownInjectorError})
-        return cls(injector_p)
-
-    def inject(self, library_path: AnyStr) -> int:
-        if isinstance(library_path, str):
-            library_path = library_path.encode()
-        assert isinstance(library_path, bytes)
-        assert os.path.isfile(library_path), f'Library not found at "{library_path.decode()}"'
-        handle = c_void_p()
-        call_c_func(libinjector.injector_inject, self.injector_p, library_path, pointer(handle))
-        return handle.value
-
-    def detach(self) -> None:
-        call_c_func(libinjector.injector_detach, self.injector_p)
-
-
-def inject(pid: int, library_path: AnyStr) -> int:
+def inject(pid: int, library_path: AnyStr, uninject: bool = False) -> int:
     """
     Inject the shared library at library_path to the process (or thread) with the given pid.
-    Return the handle to the loaded library.
+    If uninject is True, the library will be unloaded after injection.
+    Return the handle to the injected library.
     """
-    if not os.path.isfile(library_path):
-        raise LibraryNotFoundException(library_path)
-    injector = Injector.attach(pid)
-    try:
-        return injector.inject(library_path)
-    finally:
-        injector.detach()
+    if isinstance(library_path, str):
+        encoded_library_path = library_path.encode()
+    else:
+        encoded_library_path = library_path
+    assert isinstance(encoded_library_path, bytes)
+    if not os.path.isfile(encoded_library_path):
+        raise LibraryNotFoundException(encoded_library_path)
+    with attach(pid) as injector:
+        handle = injector.inject(encoded_library_path)
+        if uninject:
+            injector.uninject(handle)
+        return handle

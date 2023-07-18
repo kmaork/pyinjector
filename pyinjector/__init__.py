@@ -1,4 +1,4 @@
-from .api import inject, LibraryNotFoundException, InjectorError
+from .api import inject, attach, PyInjectorError, LibraryNotFoundException, InjectorError
 
 from types import ModuleType
 
@@ -13,3 +13,5 @@ def legacy_pyinjector_import():
 
 
 legacy_pyinjector_import()
+
+__all__ = ['inject', 'attach', 'PyInjectorError', 'LibraryNotFoundException', 'InjectorError']
