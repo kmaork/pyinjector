@@ -10,23 +10,20 @@ typedef struct {
     injector_t *injector;
 } Injector;
 
-void Injector_raise(char* func_name, int result) {
+void Injector_raise(char* func_name, int result)
+{
     PyObject* error_args = Py_BuildValue("sis", func_name, result, injector_error());
     PyErr_SetObject(InjectorException, error_args);
     Py_DECREF(error_args);
 }
 
-static void Injector_dealloc(Injector* self)
-{
-    Py_TYPE(self)->tp_free((PyObject*)self);
-}
-
 static PyObject *Injector_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     Injector *self = (Injector *)type->tp_alloc(type, 0);
-    if (self != NULL) {
-        self->injector = NULL;
+    if (self == NULL) {
+        return NULL;
     }
+    self->injector = NULL;
     return (PyObject *)self;
 }
 
@@ -50,17 +47,15 @@ static PyObject *Injector_attach(Injector *self, PyObject *args)
 
 static PyObject *Injector_inject(Injector *self, PyObject *args)
 {
-    Py_buffer buffer;
+    Py_buffer path_buffer;
     void *handle;
     int result;
 
-    if (!PyArg_ParseTuple(args, "y*", &buffer)) {
+    if (!PyArg_ParseTuple(args, "y*", &path_buffer)) {
         return NULL;
     }
 
-    char* path = buffer.buf;
-
-    result = injector_inject(self->injector, path, &handle);
+    result = injector_inject(self->injector, path_buffer.buf, &handle);
     if (result != INJERR_SUCCESS) {
         Injector_raise("injector_inject", result);
         return NULL;
@@ -115,7 +110,8 @@ static PyObject *Injector_detach(Injector *self, PyObject *args)
         Injector_raise("injector_detach", result);
         return NULL;
     }
-
+    // injector_detach frees the injector
+    self->injector = NULL;
     Py_RETURN_NONE;
 }
 
@@ -123,7 +119,7 @@ static PyMethodDef Injector_methods[] = {
     {"attach", (PyCFunction)Injector_attach, METH_VARARGS, "Attach the injector to a process."},
     {"inject", (PyCFunction)Injector_inject, METH_VARARGS, "Inject a shared library into the process."},
     #if defined(__APPLE__) || defined(__linux)
-    {"call", (PyCFunction)Injector_call, METH_VARARGS, "Call a function in the injected library."},
+    {"call", (PyCFunction)Injector_call, METH_VARARGS, NULL},
     #endif
     {"uninject", (PyCFunction)Injector_uninject, METH_VARARGS, "Uninject a previously injected library."},
     {"detach", (PyCFunction)Injector_detach, METH_NOARGS, "Detach the injector from the process."},
@@ -133,12 +129,11 @@ static PyMethodDef Injector_methods[] = {
 static PyTypeObject InjectorType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "injector.Injector",
-    .tp_doc = "Injector objects",
+    .tp_doc = "Low level wrapper for injector functions",
     .tp_basicsize = sizeof(Injector),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
     .tp_new = Injector_new,
-    .tp_dealloc = (destructor)Injector_dealloc,
     .tp_methods = Injector_methods,
 };
 
