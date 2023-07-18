@@ -8,7 +8,10 @@ from pytest import raises, mark
 
 INJECTION_LIB_SPEC = find_spec('pyinjector_tests_injection')
 assert INJECTION_LIB_SPEC is not None, 'Could not find pyinjector_tests_injection'
-INJECTION_LIB_PATH = INJECTION_LIB_SPEC.origin
+origin = INJECTION_LIB_SPEC.origin
+assert isinstance(origin, str), 'Could not find pyinjector_tests_injection'
+# mypy is weird
+INJECTION_LIB_PATH = origin
 STRING_PRINTED_FROM_LIB = b'Let it be green\n'
 TIME_TO_WAIT_FOR_PROCESS_TO_INIT = 1
 TIME_TO_WAIT_FOR_INJECTION_TO_RUN = 1
@@ -20,6 +23,7 @@ def test_inject(uninject: bool):
     # injection does not affect the target python process.
     python = getattr(sys, '_base_executable', sys.executable)
     with Popen([python, '-c', 'while True: pass'], stdout=PIPE) as process:
+        assert process.stdout is not None
         try:
             time.sleep(TIME_TO_WAIT_FOR_PROCESS_TO_INIT)
             handle1 = inject(process.pid, INJECTION_LIB_PATH, uninject=uninject)
