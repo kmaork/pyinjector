@@ -4,7 +4,7 @@ from subprocess import Popen, PIPE
 from importlib.util import find_spec
 
 from pyinjector import inject, LibraryNotFoundException, InjectorError
-from pytest import raises, mark
+from pytest import raises, mark, xfail
 
 INJECTION_LIB_SPEC = find_spec('pyinjector_tests_injection')
 assert INJECTION_LIB_SPEC is not None, 'Could not find pyinjector_tests_injection'
@@ -19,6 +19,8 @@ TIME_TO_WAIT_FOR_INJECTION_TO_RUN = 1
 
 @mark.parametrize('uninject', [True, False])
 def test_inject(uninject: bool):
+    if uninject and sys.platform == 'linux' and 'musl' in open('/proc/self/maps').read():
+        xfail("Can't uninject on musl")
     # In new virtualenv versions on Windows, python.exe invokes the original python.exe as a subprocess, so the
     # injection does not affect the target python process.
     python = getattr(sys, '_base_executable', sys.executable)
