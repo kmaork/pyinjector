@@ -30,7 +30,7 @@ jobs:
         # git needed for checkout
         # patchelf needed for auditwheel
         run: apk add gcc musl-dev git patchelf
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Install dependencies
@@ -40,7 +40,7 @@ jobs:
       - name: Audit wheel
         run: auditwheel repair .tox/.pkg/dist/*.whl -w audited_wheels
       - name: Upload wheel
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: audited_wheels/*
@@ -54,7 +54,7 @@ jobs:
       matrix:
         python-version: [cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310, cp311-cp311]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Set up Python
@@ -68,7 +68,7 @@ jobs:
       - name: Audit wheel
         run: auditwheel repair .tox/.pkg/dist/*.whl -w audited_wheels
       - name: Upload wheel
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: audited_wheels/*
@@ -81,7 +81,7 @@ jobs:
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         arch: [x86, x64]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Set up Python
@@ -94,7 +94,7 @@ jobs:
       - name: Test with tox
         run: python -m tox
       - name: Upload wheel
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: .tox/.pkg/dist/*
@@ -106,7 +106,7 @@ jobs:
       matrix:
         python-version: [ "3.11" ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Set up Python
@@ -118,7 +118,7 @@ jobs:
       - name: Test with tox
         run: sudo python -m tox -e sdist
       - name: Upload dist
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: .tox/.pkg/dist/*
