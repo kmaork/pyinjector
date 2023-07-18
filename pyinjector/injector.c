@@ -56,6 +56,7 @@ static PyObject *Injector_inject(Injector *self, PyObject *args)
     }
 
     result = injector_inject(self->injector, path_buffer.buf, &handle);
+    PyBuffer_Release(&path_buffer);
     if (result != INJERR_SUCCESS) {
         Injector_raise("injector_inject", result);
         return NULL;
@@ -164,7 +165,12 @@ PyMODINIT_FUNC PyInit_injector(void)
 
     InjectorException = PyErr_NewException("injector.InjectorException", NULL, NULL);
     Py_INCREF(InjectorException);
-    PyModule_AddObject(m, "InjectorException", InjectorException);
+    if (PyModule_AddObject(m, "InjectorException", InjectorException) < 0) {
+        Py_DECREF(InjectorException);
+        Py_DECREF(&InjectorType);
+        Py_DECREF(m);
+        return NULL;
+    }
 
     return m;
 }
