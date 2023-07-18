@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+from contextlib import contextmanager
 from typing import AnyStr, Optional
 from sys import platform
 
@@ -59,10 +60,28 @@ If you need to inject without root permissions, please report here:
         )
 
 
-def inject(pid: int, library_path: AnyStr) -> int:
+@contextmanager
+def attach(pid: int):
+    exception_map = {(-8, 'linux'): LinuxInjectorPermissionError,
+                     (-1, 'darwin'): MacUnknownInjectorError}
+    injector = Injector()
+    try:
+        injector.attach(pid)
+        try:
+            yield injector
+        finally:
+            injector.detach()
+    except InjectorException as e:
+        func_name, ret_val, error_str = e.args
+        exception_cls = exception_map.get((ret_val, platform), InjectorError)
+        raise exception_cls(func_name, ret_val, error_str) from e
+
+
+def inject(pid: int, library_path: AnyStr, uninject: bool = False) -> int:
     """
     Inject the shared library at library_path to the process (or thread) with the given pid.
-    Return the handle to the loaded library.
+    If uninject is True, the library will be unloaded after injection.
+    Return the handle to the injected library.
     """
     if isinstance(library_path, str):
         encoded_library_path = library_path.encode()
@@ -71,22 +90,8 @@ def inject(pid: int, library_path: AnyStr) -> int:
     assert isinstance(encoded_library_path, bytes)
     if not os.path.isfile(encoded_library_path):
         raise LibraryNotFoundException(encoded_library_path)
-
-    exception_map = {(-8, 'linux'): LinuxInjectorPermissionError,
-                     (-1, 'darwin'): MacUnknownInjectorError}
-    injector = Injector()
-    try:
-        injector.attach(pid)
-        try:
-            return injector.inject(encoded_library_path)
-        finally:
-            injector.detach()
-    except InjectorException as e:
-        func_name, ret_val, error_str = e.args
-        exception_cls = exception_map.get((ret_val, platform), InjectorError)
-        raise exception_cls(func_name, ret_val, error_str) from e
-
-# todo:
-#   "# If defined(__APPLE__) || defined(__linux)" in pyi
-#   make attach a class method that returns an injector instance? what happens if we call non attach methods first?
-#   read all that garbage c code...
+    with attach(pid) as injector:
+        handle = injector.inject(encoded_library_path)
+        if uninject:
+            injector.uninject(handle)
+        return handle
