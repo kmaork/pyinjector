@@ -10,6 +10,7 @@ on:
   release:
     types: [ created ]
   pull_request:
+  push:
 
 jobs:
   test_alpine:
