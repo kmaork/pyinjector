@@ -18,6 +18,7 @@ SOURCES = [str(c.relative_to(PROJECT_ROOT))
 injector_extension = Extension(
     'pyinjector.injector',
     sources=SOURCES,
+    extra_objects=[str(INJECTOR_SRC / 'shellcode.S')] if platform == 'linux' else [],
     include_dirs=[str(INJECTOR_DIR.relative_to(PROJECT_ROOT) / 'include')],
     export_symbols=['injector_attach', 'injector_inject', 'injector_detach', 'injector_error'],
     define_macros=[('EM_AARCH64', '183')]  # Needed on CentOS for some reason
