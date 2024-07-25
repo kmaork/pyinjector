@@ -30,7 +30,7 @@ jobs:
         # git needed for checkout
         # patchelf needed for auditwheel
         run: apk add gcc musl-dev git patchelf
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Install dependencies
@@ -54,7 +54,7 @@ jobs:
       matrix:
         python-version: [cp38-cp38, cp39-cp39, cp310-cp310, cp311-cp311, cp312-cp312]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Set up Python
@@ -81,7 +81,7 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         arch: [x86, x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Set up Python
@@ -106,7 +106,7 @@ jobs:
       matrix:
         python-version: [ "3.11", "3.12" ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Set up Python
