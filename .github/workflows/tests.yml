@@ -48,15 +48,13 @@ jobs:
   test_manylinux:
     runs-on: ubuntu-latest
     # Need a relatively modern platform (2014) for the actions themselves to work
-    container: quay.io/pypa/manylinux2014_x86_64
+    container: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
       fail-fast: false
       matrix:
         python-version: [cp38-cp38, cp39-cp39, cp310-cp310, cp311-cp311, cp312-cp312]
     steps:
       - uses: actions/checkout@v4
-        env:
-          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
         with:
           submodules: true
       - name: Set up Python
