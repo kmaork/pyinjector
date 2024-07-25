@@ -2,4 +2,5 @@
 # regardless of the platform where it was built.
 recursive-include injector *.h
 recursive-include injector/src *.c
+recursive-include injector/src *.S
 include LICENSE
