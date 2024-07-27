@@ -1,0 +1,36 @@
+services:
+  target:
+    build:
+      dockerfile: Dockerfile
+    command:
+      - python
+      - -c
+      - |
+        print('started')
+        import time
+        time.sleep(10)
+        print("time's up!")
+        exit(1)
+
+  injector:
+    image: 'python:3.11'
+    pid: host
+    volumes:
+      - ..:/src
+    depends_on:
+      - target
+    working_dir: /src
+    command:
+      - bash
+      - -c
+      - |
+        set -euo pipefail
+        python3 -m venv /tmp/.venv-integration
+        . /tmp/.venv-integration/bin/activate
+        python3 -m pip install .
+        set -euo pipefail  # this is a new shell after the activate
+        sopath=$(ls /proc/*/root/app/libcontainer-injection.so)
+        printf 'sopath="%s"\n' "$$sopath"
+        pid=$(echo "$$sopath" | awk -F / '{print $3}')
+        printf 'pid="%s"\n' "$$pid"
+        inject --process-root "/proc/$$pid/root" "$$pid" /app/libcontainer-injection.so

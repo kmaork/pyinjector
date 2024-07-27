@@ -12,7 +12,7 @@ class PyInjectorError(Exception):
 
 
 class LibraryNotFoundException(PyInjectorError):
-    def __init__(self, path: bytes):
+    def __init__(self, path: AnyStr):
         self.path = path
 
     def __str__(self):
@@ -77,21 +77,34 @@ def attach(pid: int):
         raise exception_cls(func_name, ret_val, error_str) from e
 
 
-def inject(pid: int, library_path: AnyStr, uninject: bool = False) -> int:
+def encode_if_needed(path: AnyStr) -> bytes:
+    if isinstance(path, str):
+        return path.encode()
+    return path
+
+
+def self_relative_path(library_path: AnyStr, process_root: AnyStr):
+    if not process_root:
+        return library_path
+    encoded_library_path = encode_if_needed(library_path)
+    encoded_proc_root = encode_if_needed(process_root)
+    return os.path.normpath(encoded_proc_root + b'/' + encoded_library_path)
+
+
+def inject(pid: int, library_path: AnyStr, uninject: bool = False,
+           process_root: AnyStr = "") -> int:
     """
     Inject the shared library at library_path to the process (or thread) with the given pid.
     If uninject is True, the library will be unloaded after injection.
+    If the target process is running in container or chroot jail, library_path
+    should be given as the target process will see it, process_root should
+    be the path to the target process's root e.g. /proc/<pid>/root/
     Return the handle to the injected library.
     """
-    if isinstance(library_path, str):
-        encoded_library_path = library_path.encode()
-    else:
-        encoded_library_path = library_path
-    assert isinstance(encoded_library_path, bytes)
-    if not os.path.isfile(encoded_library_path):
-        raise LibraryNotFoundException(encoded_library_path)
+    if not os.path.isfile(self_relative_path(library_path, process_root)):
+        raise LibraryNotFoundException(self_relative_path(library_path, process_root))
     with attach(pid) as injector:
-        handle = injector.inject(encoded_library_path)
+        handle = injector.inject(encode_if_needed(library_path))
         if uninject:
             injector.uninject(handle)
         return handle
