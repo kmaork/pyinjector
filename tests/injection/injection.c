@@ -3,6 +3,14 @@ PyMODINIT_FUNC PyInit_pyinjector_tests_injection(void) {return NULL;}
 
 const char *MAGIC = "Let it be green\n";
 
+/* A trivial exported function used to test the remote-call API. */
+#if defined(_WIN32)
+__declspec(dllexport)
+#else
+__attribute__((visibility("default")))
+#endif
+int pyinjector_tests_injection_answer(void) { return 42; }
+
 #ifdef _WIN32
     #include <windows.h>
     #include <io.h>
