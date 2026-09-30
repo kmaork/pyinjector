@@ -139,7 +139,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-sdist
-          path: .tox/.pkg/dist/*
+          path: .tox/.pkg/dist/*.tar.gz
 
   publish:
     if: (github.event_name == 'release' && github.event.action == 'created') || inputs.deploy
