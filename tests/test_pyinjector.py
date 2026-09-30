@@ -67,20 +67,22 @@ def test_inject_safe():
     assert isinstance(handle, int)
 
 
-@mark.skipif(sys.platform != 'linux', reason='remote_call test uses a glibc/musl symbol via RTLD_DEFAULT')
-def test_remote_call_getpid():
+@mark.skipif(sys.platform != 'linux', reason='remote-call test injects a Linux .so and calls into it')
+def test_remote_call():
     from pyinjector.injector import Injector
     python = getattr(sys, '_base_executable', sys.executable)
+    lib_path = INJECTION_LIB_PATH.encode() if isinstance(INJECTION_LIB_PATH, str) else INJECTION_LIB_PATH
     with Popen([python, '-c', 'while True: pass']) as process:
         try:
             time.sleep(TIME_TO_WAIT_FOR_PROCESS_TO_INIT)
             injector = Injector()
             injector.attach(process.pid)
             try:
-                # RTLD_DEFAULT (handle 0) resolves libc's getpid in the target.
-                addr = injector.remote_func_addr(0, 'getpid')
+                # Inject our test library, then resolve and call a function it exports.
+                handle = injector.inject(lib_path)
+                addr = injector.remote_func_addr(handle, 'pyinjector_tests_injection_answer')
                 assert isinstance(addr, int) and addr != 0
-                assert injector.remote_call(addr) == process.pid
+                assert injector.remote_call(addr) == 42
             finally:
                 injector.detach()
         finally:
