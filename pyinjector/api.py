@@ -77,10 +77,14 @@ def attach(pid: int):
         raise exception_cls(func_name, ret_val, error_str) from e
 
 
-def inject(pid: int, library_path: AnyStr, uninject: bool = False) -> int:
+def inject(pid: int, library_path: AnyStr, uninject: bool = False, safe: bool = False) -> int:
     """
     Inject the shared library at library_path to the process (or thread) with the given pid.
     If uninject is True, the library will be unloaded after injection.
+    If safe is True, the library's loader (dlopen) runs in a freshly cloned thread instead of hijacking
+    an existing thread. This avoids deadlocks when the interrupted thread holds a non-reentrant lock that
+    dlopen needs (see https://github.com/kubo/injector/issues/31). It is currently only available on
+    Linux x86-64; requesting it elsewhere raises NotImplementedError.
     Return the handle to the injected library.
     """
     if isinstance(library_path, str):
@@ -91,7 +95,15 @@ def inject(pid: int, library_path: AnyStr, uninject: bool = False) -> int:
     if not os.path.isfile(encoded_library_path):
         raise LibraryNotFoundException(encoded_library_path)
     with attach(pid) as injector:
-        handle = injector.inject(encoded_library_path)
+        if safe:
+            try:
+                inject_in_cloned_thread = injector.inject_in_cloned_thread
+            except AttributeError:
+                raise NotImplementedError(
+                    "safe=True (inject_in_cloned_thread) is only available on Linux x86-64")
+            handle = inject_in_cloned_thread(encoded_library_path)
+        else:
+            handle = injector.inject(encoded_library_path)
         if uninject:
             injector.uninject(handle)
         return handle

@@ -50,3 +50,38 @@ def test_inject_no_such_pid():
     with raises(InjectorError) as excinfo:
         inject(-1, INJECTION_LIB_PATH)
     assert excinfo.value.ret_val == -3
+
+
+@mark.skipif(sys.platform != 'linux', reason='safe injection (cloned thread) is Linux x86-64 only')
+def test_inject_safe():
+    python = getattr(sys, '_base_executable', sys.executable)
+    with Popen([python, '-c', 'while True: pass'], stdout=PIPE) as process:
+        assert process.stdout is not None
+        try:
+            time.sleep(TIME_TO_WAIT_FOR_PROCESS_TO_INIT)
+            handle = inject(process.pid, INJECTION_LIB_PATH, safe=True)
+            time.sleep(TIME_TO_WAIT_FOR_INJECTION_TO_RUN)
+            assert process.stdout.read(len(STRING_PRINTED_FROM_LIB)) == STRING_PRINTED_FROM_LIB
+        finally:
+            process.kill()
+    assert isinstance(handle, int)
+
+
+@mark.skipif(sys.platform != 'linux', reason='remote_call test uses a glibc/musl symbol via RTLD_DEFAULT')
+def test_remote_call_getpid():
+    from pyinjector.injector import Injector
+    python = getattr(sys, '_base_executable', sys.executable)
+    with Popen([python, '-c', 'while True: pass']) as process:
+        try:
+            time.sleep(TIME_TO_WAIT_FOR_PROCESS_TO_INIT)
+            injector = Injector()
+            injector.attach(process.pid)
+            try:
+                # RTLD_DEFAULT (handle 0) resolves libc's getpid in the target.
+                addr = injector.remote_func_addr(0, 'getpid')
+                assert isinstance(addr, int) and addr != 0
+                assert injector.remote_call(addr) == process.pid
+            finally:
+                injector.detach()
+        finally:
+            process.kill()
